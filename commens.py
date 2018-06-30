@@ -114,7 +114,7 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
         ])
         if url.split('?')[0].endswith('reviews'):
             options.count += 1
-            if options.count > options.max_count: sys.exit()
+            if options.count >= options.max_count: sys.exit()
     else:
         html_content = record[0]
     return pyquery.PyQuery(html_content)
