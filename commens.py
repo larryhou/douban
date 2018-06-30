@@ -28,7 +28,7 @@ class ArgumentOptions(object):
         self.command = data.command # type:str
         self.douban_url = data.douban_url # type:str
         self.max_count = data.max_count # type: int
-        self.no_cache = data.no_cache # type: bool
+        self.dont_cache = data.dont_cache # type: bool
         self.count = 0 # type: int
 
 def get_database_connection()->sqlite3.Connection:
@@ -108,7 +108,7 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
     command = 'SELECT html FROM {} WHERE link=?'.format(tables.page)
     result = cursor.execute(command, (url,))
     record = result.fetchone()
-    if not record or options.no_cache:
+    if not record or options.dont_cache:
         time.sleep(2) # douban security restriction
         response = requests.get(url)
         html_content = response.text
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     arguments.add_argument('--command', '-c', default=commands.dump_review)
     arguments.add_argument('--douban-url', '-u', required=True)
     arguments.add_argument('--max-count', '-m', type=int, default=5)
-    arguments.add_argument('--no-cache', '-h', action='store_true')
+    arguments.add_argument('--dont-cache', '-n', action='store_true')
     global options
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
     douban_url = options.douban_url  # type: str
