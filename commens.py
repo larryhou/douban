@@ -123,7 +123,6 @@ def crawl_review_comments(url:str):
     cursor = connection.cursor()
     review_url = url.split('?')[0]
     review_aid = review_url.split('/')[-2]
-    if search_table(cursor=cursor, name=tables.review, id=review_aid):return
     html = fetch_html_document(cursor=cursor, url=url)
     review_title = html.find('div.article h1 span').text()
     pointer = html.find('header.main-hd').children('a span')
