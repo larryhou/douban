@@ -223,7 +223,7 @@ if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
     arguments.add_argument('--command', '-c', default=commands.dump_review)
     arguments.add_argument('--douban-url', '-u', required=True)
-    arguments.add_argument('--max-count', '-m', type=int, default=5)
+    arguments.add_argument('--max-count', '-m', type=int, default=20)
     arguments.add_argument('--dont-cache', '-n', action='store_true')
     global options
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
