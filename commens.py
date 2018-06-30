@@ -38,7 +38,7 @@ def create_table(name:str, cursor:sqlite3.Cursor):
     if name == tables.comment:
         schema = '''
                 CREATE TABLE {} 
-                    (id text NOT NULL UNIQUE ON CONFLICT REPLACE, 
+                    (id text NOT NULL UNIQUE ON CONFLICT IGNORE, 
                      text text NOT NULL, 
                      date integer NOT NULL,
                      author_uid text NOT NULL,
@@ -51,7 +51,7 @@ def create_table(name:str, cursor:sqlite3.Cursor):
     elif name == tables.user:
         schema = '''
                 CREATE TABLE {} 
-                    (id text NOT NULL UNIQUE ON CONFLICT REPLACE, 
+                    (id text NOT NULL UNIQUE ON CONFLICT IGNORE, 
                      name text NOT NULL, 
                      state text,
                      link text NOT NULL,
@@ -67,7 +67,7 @@ def create_table(name:str, cursor:sqlite3.Cursor):
     elif name == tables.review:
         schema = '''
                 CREATE TABLE {} 
-                    (id text NOT NULL UNIQUE ON CONFLICT REPLACE, 
+                    (id text NOT NULL UNIQUE ON CONFLICT IGNORE, 
                      title text NOT NULL, 
                      link text NOT NULL,
                      date integer NOT NULL,
