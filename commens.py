@@ -210,7 +210,7 @@ def crawl_subject_comments(url:str):
         node = pyquery.PyQuery(review)
         review_url = node.find('.main-bd h2 a').attr('href')
         crawl_review_comments(url=review_url)
-    connection.commit()
+        connection.commit()
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = url.split('?')[0] + paginator.attr('href')
