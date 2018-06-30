@@ -197,7 +197,6 @@ def crawl_review_comments(url:str):
         print('[{}]{!s} {!r}'.format(comment_time_value, comment_author, comment_text))
     insert_table(name=tables.comment, cursor=cursor, data_rows=comment_list)
     insert_table(name=tables.user, cursor=cursor, data_rows=user_list)
-    # connection.commit()
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = url.split('?')[0] + paginator.attr('href')
@@ -211,6 +210,7 @@ def crawl_subject_comments(url:str):
         node = pyquery.PyQuery(review)
         review_url = node.find('.main-bd h2 a').attr('href')
         crawl_review_comments(url=review_url)
+    connection.commit()
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = url.split('?')[0] + paginator.attr('href')
