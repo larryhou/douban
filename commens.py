@@ -113,7 +113,8 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
         response = requests.get(url)
         if response.status_code != 200:
             print(response.text)
-            connection.commit()
+            finish_database()
+            sys.exit(1)
         html_content = response.text
         insert_table(cursor=cursor, name=tables.page, data_rows=[
             (url, html_content)
