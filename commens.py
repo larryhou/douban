@@ -113,7 +113,7 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
         response = requests.get(url)
         if response.status_code != 200:
             print(response.text)
-            finish_database()
+            commit_database()
             sys.exit(1)
         html_content = response.text
         insert_table(cursor=cursor, name=tables.page, data_rows=[
@@ -122,7 +122,7 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
         if url.split('?')[0].endswith('reviews'):
             options.count += 1
             if options.count > options.max_count:
-                finish_database()
+                commit_database()
                 sys.exit()
     else:
         html_content = record[0]
@@ -197,7 +197,7 @@ def crawl_review_comments(url:str):
         print('[{}]{!s} {!r}'.format(comment_time_value, comment_author, comment_text))
     insert_table(name=tables.comment, cursor=cursor, data_rows=comment_list)
     insert_table(name=tables.user, cursor=cursor, data_rows=user_list)
-    connection.commit()
+    # connection.commit()
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = url.split('?')[0] + paginator.attr('href')
@@ -216,7 +216,7 @@ def crawl_subject_comments(url:str):
         next_page_url = url.split('?')[0] + paginator.attr('href')
         crawl_subject_comments(url=next_page_url)
 
-def finish_database():
+def commit_database():
     connection.commit()
     connection.close()
 
@@ -238,5 +238,8 @@ if __name__ == '__main__':
     elif options.command == commands.dump_subject:
         if not douban_url.endswith('reviews'):
             douban_url = '{}reviews'.format(douban_url)
-        crawl_subject_comments(url=douban_url)
-    finish_database()
+        try:
+            crawl_subject_comments(url=douban_url)
+        except RuntimeError as error:
+            print(error)
+    commit_database()
