@@ -117,7 +117,9 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
         ])
         if url.split('?')[0].endswith('reviews'):
             options.count += 1
-            if options.count > options.max_count: sys.exit()
+            if options.count > options.max_count:
+                finish_database()
+                sys.exit()
     else:
         html_content = record[0]
     return pyquery.PyQuery(html_content)
@@ -210,6 +212,10 @@ def crawl_subject_comments(url:str):
         next_page_url = url.split('?')[0] + paginator.attr('href')
         crawl_subject_comments(url=next_page_url)
 
+def finish_database():
+    connection.commit()
+    connection.close()
+
 if __name__ == '__main__':
     global connection
     connection = get_database_connection()
@@ -229,5 +235,4 @@ if __name__ == '__main__':
         if not douban_url.endswith('reviews'):
             douban_url = '{}reviews'.format(douban_url)
         crawl_subject_comments(url=douban_url)
-    connection.commit()
-    connection.close()
+    finish_database()
