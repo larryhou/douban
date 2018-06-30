@@ -200,6 +200,7 @@ def crawl_review_comments(url:str):
         crawl_review_comments(url=next_page_url)
 
 def crawl_subject_comments(url:str):
+    print('=== {}'.format(url))
     cursor = connection.cursor()
     html = fetch_html_document(cursor=cursor, url=url)
     for review in html.find('div.review-list div.review-item'):
