@@ -112,6 +112,7 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
         time.sleep(2) # douban security restriction
         response = requests.get(url)
         if response.status_code != 200:
+            print(response.text)
             connection.commit()
         html_content = response.text
         insert_table(cursor=cursor, name=tables.page, data_rows=[
