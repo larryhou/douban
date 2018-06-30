@@ -138,7 +138,6 @@ def crawl_review_comments(url:str):
     review_author = pointer.text()
     pointer = pointer.parent()
     review_author_url = pointer.attr('href') # type: str
-    print(review_author_url)
     review_author_uid = review_author_url.split('/')[-2]
     pointer = pointer.next()
     review_subject = pointer.text()
