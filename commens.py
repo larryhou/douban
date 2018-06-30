@@ -106,11 +106,15 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
     result = cursor.execute('SELECT html FROM ? WHERE url=?', (tables.page, url))
     record = result.fetchone()
     if not record:
+        time.sleep(2) # douban security restriction
         response = requests.get(url)
         html_content = response.text
         insert_table(cursor=cursor, name=tables.page, data_rows=[
             (url, html_content)
         ])
+        if url.split('?')[0].endswith('reviews'):
+            options.count += 1
+            if options.count > options.max_count: sys.exit()
     else:
         html_content = record[0]
     return pyquery.PyQuery(html_content)
@@ -198,8 +202,6 @@ def crawl_subject_comments(url:str):
         node = pyquery.PyQuery(review)
         review_url = node.find('.main-bd h2 a').attr('href')
         crawl_review_comments(url=review_url)
-        options.count += 1
-        if options.count > options.max_count: return
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = url.split('?')[0] + paginator.attr('href')
