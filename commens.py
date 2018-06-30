@@ -111,6 +111,8 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
     if not record or options.dont_cache:
         time.sleep(2) # douban security restriction
         response = requests.get(url)
+        if response.status_code != 200:
+            connection.commit()
         html_content = response.text
         insert_table(cursor=cursor, name=tables.page, data_rows=[
             (url, html_content)
@@ -193,7 +195,7 @@ def crawl_review_comments(url:str):
         print('[{}]{!s} {!r}'.format(comment_time_value, comment_author, comment_text))
     insert_table(name=tables.comment, cursor=cursor, data_rows=comment_list)
     insert_table(name=tables.user, cursor=cursor, data_rows=user_list)
-    connection.commit()
+    # connection.commit()
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = url.split('?')[0] + paginator.attr('href')
