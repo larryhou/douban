@@ -330,7 +330,7 @@ if __name__ == '__main__':
     arguments.add_argument('--douban-url', '-u', required=True)
     arguments.add_argument('--max-count', '-m', type=int, default=20)
     arguments.add_argument('--dont-cache', '-n', action='store_true')
-    arguments.add_argument('--sleep-time', '-t', type=float, default=2.0)
+    arguments.add_argument('--sleep-time', '-t', type=float, default=1.0)
     global options
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
     douban_url = options.douban_url  # type: str
