@@ -286,8 +286,8 @@ def crawl_review_comments(url:str):
         comment_author = header_node.find('a').text()
         comment_author_state = header_node.contents()[2].strip()
         if not comment_author_state: comment_author_state = None
-        comment_time_value = header_node.find('span').text()
-        comment_time = decode_date(value=comment_time_value)
+        comment_time_data = header_node.find('span').text()
+        comment_time = decode_date(value=comment_time_data)
         comment_record = (comment_cid, comment_text, comment_time,
                 comment_author_uid, comment_author,
                 review_aid,
@@ -295,7 +295,7 @@ def crawl_review_comments(url:str):
         comment_list.append(comment_record)
         user_record = (comment_author_uid, comment_author, comment_author_state, comment_author_url, comment_author_avatar)
         user_list.append(user_record)
-        print('[{}]{!s} {!r}'.format(comment_time_value, comment_author, comment_text))
+        print('[{}]{!s} {!r}'.format(comment_time_data, comment_author, comment_text))
     insert_table(name=tables.comment, cursor=cursor, data_rows=comment_list)
     insert_table(name=tables.user, cursor=cursor, data_rows=user_list)
     paginator = html.find('div.paginator span.next a')
