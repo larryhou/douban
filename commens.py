@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import sqlite3, pyquery, time, requests
+import sqlite3, pyquery, time, requests, re, json
 from typing import List, Tuple
 
 database_name = 'douban.sqlite'
@@ -8,6 +8,7 @@ database_name = 'douban.sqlite'
 class commands(object):
     dump_review = 'dump-review'
     dump_subject = 'dump-subject'
+    dump_discuss = 'dump-discuss'
 
     @classmethod
     def option_chocies(cls):
@@ -21,14 +22,17 @@ class tables(object):
     review = 'review'
     subject = 'subject'
     comment = 'comment'
+    discuss = 'discuss'
     page = 'page'
 
 class ArgumentOptions(object):
     def __init__(self, data):
+        print(data)
         self.command = data.command # type:str
         self.douban_url = data.douban_url # type:str
         self.max_count = data.max_count # type: int
         self.dont_cache = data.dont_cache # type: bool
+        self.sleep_time = data.sleep_time # type: float
         self.count = 0 # type: int
 
 def get_database_connection()->sqlite3.Connection:
@@ -46,6 +50,21 @@ def create_table(name:str, cursor:sqlite3.Cursor):
                      author_name text NOT NULL,
                      review_aid text NOT NULL,
                      reply_cid text,
+                     reply_author_uid text,
+                     reply_author_name text)
+                '''.format(name)
+    elif name == tables.discuss:
+        schema = '''
+                CREATE TABLE {} 
+                    (id text NOT NULL UNIQUE ON CONFLICT REPLACE, 
+                     discuss_cid text NOT NULL,
+                     text text NOT NULL, 
+                     date integer NOT NULL,
+                     author_uid text NOT NULL,
+                     author_name text NOT NULL,
+                     vote integer NOT NULL,
+                     reply_cid text,
+                     reply_quote text,
                      reply_author_uid text,
                      reply_author_name text)
                 '''.format(name)
@@ -109,10 +128,10 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
     result = cursor.execute(command, (url,))
     record = result.fetchone()
     if not record or options.dont_cache:
-        time.sleep(2) # douban security restriction
+        time.sleep(options.sleep_time) # douban security restriction
         response = requests.get(url)
         if response.status_code != 200:
-            print(response.headers)
+            print(response.status_code, response.headers)
             print(response.text)
             commit_database()
             sys.exit(1)
@@ -131,6 +150,87 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
 
 def decode_date(value:str)->int:
     return int(time.mktime(time.strptime(value, '%Y-%m-%d %H:%M:%S')))
+
+def craw_discuss(url:str):
+    print('>>> {}'.format(url))
+    cursor = connection.cursor()
+    html = fetch_html_document(cursor=cursor, url=url)
+    post_node = html.find('div.post-content div#link-report')
+    if post_node:
+        post_title = html.find('div#content h1').text()
+        post_text = post_node.find('span').text()
+        post_cid = url.split('?')[0].split('/')[-2]
+        author_node = post_node.find('div.post-author')
+        post_author_url = author_node.find('div.post-author-avatar a').attr('href') # type: str
+        post_author_uid = post_author_url.split('/')[-2]
+        post_author_avatar = author_node.find('div.post-author-avatar img').attr('src')
+        post_author_status = author_node.find('span.post-author-name').contents()[2] # type: str
+        post_author_status = post_author_status.replace('\n', '').strip()
+        post_author = author_node.find('span.post-author-name a').text()
+        post_time = decode_date(value=author_node.find('span.post-publish-date').text())
+        insert_table(cursor=cursor, name=tables.user, data_rows=[
+            (post_author_uid, post_author, post_author_status, post_author_url, post_author_avatar)
+        ])
+        insert_table(cursor=cursor, name=tables.discuss, data_rows=[
+            (post_cid, post_cid, '{}\n{}'.format(post_title, post_text), post_time, post_author_uid, post_author, 0, None, None, None, None)
+        ])
+    user_list, discuss_list = [], []
+    for item in html.find('div.comment-item'):
+        node = pyquery.PyQuery(item)
+        author_node = node.find('div.author')
+        comment_cid = node.attr('data-cid')
+        comment_discuss_cid = node.attr('data-target_id')
+        comment_time_data = author_node.find('span').text()
+        comment_time = decode_date(value=comment_time_data)
+        comment_author = author_node.find('a').text()
+        comment_author_url = author_node.find('a').attr('href') # type: str
+        comment_author_uid = comment_author_url.split('/')[-2]
+        comment_author_status = author_node.contents()[-1]
+        comment_author_avatar = node.find('div.pic img').attr('src')
+        comment_text = node.find('div.content p').text()
+
+        user_item = (comment_author_uid, comment_author, comment_author_status, comment_author_url, comment_author_avatar)
+        user_list.append(user_item)
+
+        vote_num = 0
+        vote_data = re.search('\((\d+)\)', node.find('div.op-lnks a.comment-vote').text())
+        if vote_data: vote_num = int(vote_data.group(1))
+
+        quote_node = node.find('div.reply-quote')
+        comment_reply_quote, comment_reply_author, comment_reply_author_uid = None, None, None
+        if quote_node:
+            comment_reply_quote = quote_node.find('div.all span').text()
+            comment_reply_author = quote_node.find('span.pubdate a').text()
+            comment_reply_author_url = quote_node.find('span.pubdate a').attr('href') # type: str
+            comment_reply_author_uid = comment_reply_author_url.split('/')[-2]
+
+        discuss_item = (comment_cid, comment_discuss_cid, comment_text, comment_time,
+                        comment_author_uid, comment_author, vote_num,
+                        None, comment_reply_quote, comment_reply_author_uid, comment_reply_author)
+        discuss_list.append(discuss_item)
+        print('[{}]{} {!r}'.format(comment_time_data, comment_author, comment_text))
+    insert_table(cursor=cursor, name=tables.discuss, data_rows=discuss_list)
+    insert_table(cursor=cursor, name=tables.user, data_rows=user_list)
+
+    paginator = html.find('div.paginator span.next a')
+    if paginator:
+        next_page_url = paginator.attr('href')
+        craw_discuss(url=next_page_url)
+
+def crawl_subject_discuss(url:str):
+    print('=== {}'.format(url))
+    cursor = connection.cursor()
+    html = fetch_html_document(cursor=cursor, url=url)
+    for item in html.find('div.article table#posts-table tr'):
+        node = pyquery.PyQuery(item)
+        if not node.attr('data-id'): continue
+        discuss_url = node.find('td a').attr('href')
+        craw_discuss(url=discuss_url)
+        connection.commit()
+    paginator = html.find('div.paginator span.next a')
+    if paginator:
+        next_page_url = url.split('?')[0] + paginator.attr('href')
+        crawl_subject_discuss(url=next_page_url)
 
 def crawl_review_comments(url:str):
     print('>>> {}'.format(url))
@@ -230,6 +330,7 @@ if __name__ == '__main__':
     arguments.add_argument('--douban-url', '-u', required=True)
     arguments.add_argument('--max-count', '-m', type=int, default=20)
     arguments.add_argument('--dont-cache', '-n', action='store_true')
+    arguments.add_argument('--sleep-time', '-t', type=float, default=2.0)
     global options
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
     douban_url = options.douban_url  # type: str
@@ -238,9 +339,18 @@ if __name__ == '__main__':
         crawl_review_comments(url=douban_url)
     elif options.command == commands.dump_subject:
         if not douban_url.endswith('reviews'):
-            douban_url = '{}reviews'.format(douban_url)
+            if douban_url[-1] == '/':douban_url = douban_url[:-1]
+            douban_url = '{}/reviews'.format(douban_url)
         try:
             crawl_subject_comments(url=douban_url)
+        except RuntimeError as error:
+            print(error)
+    elif options.command == commands.dump_discuss:
+        if not douban_url.endswith('discussion/'):
+            if douban_url[-1] == '/': douban_url = douban_url[:-1]
+            douban_url = '{}/discussion/'.format(douban_url)
+        try:
+            crawl_subject_discuss(url=douban_url)
         except RuntimeError as error:
             print(error)
     commit_database()
