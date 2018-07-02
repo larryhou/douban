@@ -163,7 +163,8 @@ def craw_discuss(url:str):
         post_title = html.find('div#content h1').text()
         post_cid = url.split('?')[0].split('/')[-2]
         author_node = post_node.find('div.post-author')
-        post_content = re.sub(r'\n+$', '', author_node.next().text().split('\ndiv')[0],re.MULTILINE)
+        post_node.find('style').remove()
+        post_content = author_node.next().text()
         post_author_url = author_node.find('div.post-author-avatar a').attr('href') # type: str
         post_author_uid = post_author_url.split('/')[-2]
         post_author_avatar = author_node.find('div.post-author-avatar img').attr('src')
