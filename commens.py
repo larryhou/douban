@@ -161,7 +161,7 @@ def craw_discuss(url:str):
     post_node = html.find('div.post-content div#link-report')
     if post_node:
         post_title = html.find('div#content h1').text()
-        post_content = get_text(post_node.find('span')[-1])
+        post_content = pyquery.PyQuery(post_node.find('span')[-1]).text()
         post_text = '|{}|{}'.format(post_title, post_content)
         post_cid = url.split('?')[0].split('/')[-2]
         author_node = post_node.find('div.post-author')
