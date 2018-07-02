@@ -10,6 +10,7 @@ class commands(object):
     dump_review = 'dump-review'
     dump_subject = 'dump-subject'
     dump_discuss = 'dump-discuss'
+    connect_discuss = 'connect-discuss'
 
     @classmethod
     def option_chocies(cls):
@@ -324,6 +325,9 @@ def crawl_subject_comments(url:str):
         next_page_url = url.split('?')[0] + paginator.attr('href')
         crawl_subject_comments(url=next_page_url)
 
+def connect_discuss():
+    pass
+
 def commit_database():
     connection.commit()
     connection.close()
@@ -360,4 +364,6 @@ if __name__ == '__main__':
             crawl_subject_discuss(url=douban_url)
         except RuntimeError as error:
             print(error)
+    elif options.command == commands.connect_discuss:
+        connect_discuss()
     commit_database()
