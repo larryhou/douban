@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import sqlite3, pyquery, time, requests, re, json
+import sqlite3, pyquery, time, requests, re
+from lxml.html import HtmlElement
 from typing import List, Tuple
 
 database_name = 'douban.sqlite'
@@ -27,7 +28,6 @@ class tables(object):
 
 class ArgumentOptions(object):
     def __init__(self, data):
-        print(data)
         self.command = data.command # type:str
         self.douban_url = data.douban_url # type:str
         self.max_count = data.max_count # type: int
@@ -151,6 +151,9 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
 def decode_date(value:str)->int:
     return int(time.mktime(time.strptime(value, '%Y-%m-%d %H:%M:%S')))
 
+def get_text(element:HtmlElement):
+    return ''.join(element.itertext()).strip()
+
 def craw_discuss(url:str):
     print('>>> {}'.format(url))
     cursor = connection.cursor()
@@ -158,7 +161,8 @@ def craw_discuss(url:str):
     post_node = html.find('div.post-content div#link-report')
     if post_node:
         post_title = html.find('div#content h1').text()
-        post_text = post_node.find('span').text()
+        post_content = get_text(post_node.find('span')[-1])
+        post_text = '|{}|{}'.format(post_title, post_content)
         post_cid = url.split('?')[0].split('/')[-2]
         author_node = post_node.find('div.post-author')
         post_author_url = author_node.find('div.post-author-avatar a').attr('href') # type: str
@@ -167,13 +171,15 @@ def craw_discuss(url:str):
         post_author_status = author_node.find('span.post-author-name').contents()[2] # type: str
         post_author_status = post_author_status.replace('\n', '').strip()
         post_author = author_node.find('span.post-author-name a').text()
-        post_time = decode_date(value=author_node.find('span.post-publish-date').text())
+        post_time_data = author_node.find('span.post-publish-date').text()
+        post_time = decode_date(value=post_time_data)
         insert_table(cursor=cursor, name=tables.user, data_rows=[
             (post_author_uid, post_author, post_author_status, post_author_url, post_author_avatar)
         ])
         insert_table(cursor=cursor, name=tables.discuss, data_rows=[
-            (post_cid, post_cid, '{}\n{}'.format(post_title, post_text), post_time, post_author_uid, post_author, 0, None, None, None, None)
+            (post_cid, post_cid, post_text, post_time, post_author_uid, post_author, 0, None, None, None, None)
         ])
+        print('[{}]{} |{}|{!r}'.format(post_time_data, post_author, post_title, post_content))
     user_list, discuss_list = [], []
     for item in html.find('div.comment-item'):
         node = pyquery.PyQuery(item)
@@ -211,7 +217,6 @@ def craw_discuss(url:str):
         print('[{}]{} {!r}'.format(comment_time_data, comment_author, comment_text))
     insert_table(cursor=cursor, name=tables.discuss, data_rows=discuss_list)
     insert_table(cursor=cursor, name=tables.user, data_rows=user_list)
-
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = paginator.attr('href')
