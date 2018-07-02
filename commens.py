@@ -161,10 +161,9 @@ def craw_discuss(url:str):
     post_node = html.find('div.post-content div#link-report')
     if post_node:
         post_title = html.find('div#content h1').text()
-        post_content = pyquery.PyQuery(post_node.find('span')[-1]).text()
-        post_text = '|{}|{}'.format(post_title, post_content)
         post_cid = url.split('?')[0].split('/')[-2]
         author_node = post_node.find('div.post-author')
+        post_content = re.sub(r'\n+$', '', author_node.next().text().split('\ndiv')[0],re.MULTILINE)
         post_author_url = author_node.find('div.post-author-avatar a').attr('href') # type: str
         post_author_uid = post_author_url.split('/')[-2]
         post_author_avatar = author_node.find('div.post-author-avatar img').attr('src')
@@ -173,6 +172,7 @@ def craw_discuss(url:str):
         post_author = author_node.find('span.post-author-name a').text()
         post_time_data = author_node.find('span.post-publish-date').text()
         post_time = decode_date(value=post_time_data)
+        post_text = '|{}|{}'.format(post_title, post_content)
         insert_table(cursor=cursor, name=tables.user, data_rows=[
             (post_author_uid, post_author, post_author_status, post_author_url, post_author_avatar)
         ])
@@ -217,6 +217,7 @@ def craw_discuss(url:str):
         print('[{}]{} {!r}'.format(comment_time_data, comment_author, comment_text))
     insert_table(cursor=cursor, name=tables.discuss, data_rows=discuss_list)
     insert_table(cursor=cursor, name=tables.user, data_rows=user_list)
+    # sys.exit()
     paginator = html.find('div.paginator span.next a')
     if paginator:
         next_page_url = paginator.attr('href')
