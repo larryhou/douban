@@ -22,7 +22,7 @@ def caculate_hotwords(buffer:io.StringIO):
         if ord(char) <= 0x7F or char in excludes: continue
         if char not in char_map: char_map[char] = [0, []]
         position = buffer.tell()
-        scope = buffer.read(SCOPE_DEPTH)
+        scope = buffer.read(HOTWORD_SEARCH_DEPTH)
         buffer.seek(position)
         item = char_map[char]
         item[1].append(scope)
@@ -124,8 +124,8 @@ if __name__ == '__main__':
     debug = elapse_dubugger()
     debug.enabled = options.debug
 
-    global SCOPE_DEPTH, MAX_RESULT_NUM
-    SCOPE_DEPTH = options.depth
+    global HOTWORD_SEARCH_DEPTH, MAX_RESULT_NUM
+    HOTWORD_SEARCH_DEPTH = options.depth
     MAX_RESULT_NUM = options.max_num
 
     if options.webpage:
