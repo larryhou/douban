@@ -37,7 +37,7 @@ class ArgumentOptions(object):
 
 if __name__ == '__main__':
     global connection
-    connection = sqlite3.connect('peom.sqlite')
+    connection = sqlite3.connect('poem.sqlite')
     cursor = connection.cursor()
     commens.options = ArgumentOptions()
     book = fetch_html_document(cursor=cursor, url='https://www.gushiwen.org/guwen/shijing.aspx')
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         review_node = PyQuery(response.text).find('div.contyishang')
         review_node.find('a').remove()
         review_text = review_node.text()
-        print(title, author, poem_text)
+        print('{} {}\n{}'.format(title, author, poem_text))
         insert_table(cursor=cursor, name=tables.poem, data_rows=[
             (title, author, poem_text, note_text, review_text)
         ])

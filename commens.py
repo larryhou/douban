@@ -129,7 +129,8 @@ def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
     record = result.fetchone()
     if not record or options.dont_cache:
         time.sleep(options.sleep_time) # douban security restriction
-        response = requests.get(url)
+        headers = {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0 Safari/605.1.15'}
+        response = requests.get(url, headers=headers)
         if response.status_code != 200:
             print(response.status_code, response.headers)
             print(response.text)
