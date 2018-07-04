@@ -64,7 +64,7 @@ def caculate_hotwords(buffer:io.StringIO):
 def strip_redundants(data_list:List[Tuple[str, int]]):
     temp_list = [] # type: list[tuple[str, str, int]]
     for item in data_list:
-        temp_list.append((item[0][-2:][::-1], item[0], item[1]))
+        temp_list.append((item[0][-1:-3:-1], item[0], item[1]))
     def reverse_rank_sort(a, b):
         if a[0] != b[0]: return 1 if a[0] > b[0] else -1
         return -1 if a[-1] > b[-1] else 1
