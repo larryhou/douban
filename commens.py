@@ -122,14 +122,15 @@ def insert_table(cursor:sqlite3.Cursor, name:str, data_rows:List[Tuple]):
     '''.format(name, ','.join(['?'] * len(data_rows[0])))
     cursor.executemany(schema, data_rows)
 
-def fetch_html_document(cursor:sqlite3.Cursor, url:str)->pyquery.PyQuery:
+def fetch_html_document(cursor:sqlite3.Cursor, url:str, headers = None)->pyquery.PyQuery:
     create_table(name=tables.page, cursor=cursor)
     command = 'SELECT html FROM {} WHERE link=?'.format(tables.page)
     result = cursor.execute(command, (url,))
     record = result.fetchone()
     if not record or options.dont_cache:
         time.sleep(options.sleep_time) # douban security restriction
-        headers = {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0 Safari/605.1.15'}
+        if not headers:
+            headers = {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.0 Safari/605.1.15'}
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             print(response.status_code, response.headers)
