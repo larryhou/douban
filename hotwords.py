@@ -7,8 +7,10 @@ excludes = tuple('。，；：…（）《》？！、“”—[]【】°的了�
 class elapse_dubugger(object):
     def __init__(self):
         self.__time = time.clock()
+        self.enabled = True
 
     def log(self, name:str):
+        if not self.enabled: return
         print('{:7.3f}ms {}'.format(1000*(time.clock() - self.__time), name))
         self.__time = time.clock()
 
@@ -20,7 +22,7 @@ def caculate_hotwords(buffer:io.StringIO):
         if ord(char) <= 0x7F or char in excludes: continue
         if char not in char_map: char_map[char] = [0, []]
         position = buffer.tell()
-        scope = buffer.read(scope_depth)
+        scope = buffer.read(SCOPE_DEPTH)
         buffer.seek(position)
         item = char_map[char]
         item[1].append(scope)
@@ -58,8 +60,13 @@ def caculate_hotwords(buffer:io.StringIO):
         return 1 if a[0] > b[0] else -1
     word_list.sort(key=cmp_to_key(hotword_rank_sort))
     debug.log('sort')
-    for word, num in word_list:
+    length = len(word_list)
+    output_limit = MAX_RESULT_NUM if MAX_RESULT_NUM > 0 else length
+    offset = length - output_limit
+    for n in range(offset, length):
+        word, num = word_list[n]
         print(word, num)
+        if n + 1 - offset >= output_limit: break
 
 def strip_redundants(data_list:List[Tuple[str, int]]):
     temp_list = [] # type: list[tuple[str, str, int]]
@@ -108,12 +115,18 @@ if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
     arguments.add_argument('--text-path', '-p', required=True)
     arguments.add_argument('--webpage', '-w', action='store_true')
+    arguments.add_argument('--max-num', '-m', type=int, default=0)
     arguments.add_argument('--depth', '-d', type=int, default=10)
+    arguments.add_argument('--debug', '-g', action='store_true')
     options = arguments.parse_args(sys.argv[1:])
     text_path = options.text_path
-    global debug, scope_depth
+    global debug
     debug = elapse_dubugger()
-    scope_depth = options.depth
+    debug.enabled = options.debug
+
+    global SCOPE_DEPTH, MAX_RESULT_NUM
+    SCOPE_DEPTH = options.depth
+    MAX_RESULT_NUM = options.max_num
 
     if options.webpage:
         response = requests.get(url=text_path)
