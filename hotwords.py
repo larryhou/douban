@@ -97,7 +97,9 @@ def iterate_search(data_list:typing.List[str], hotword:str):
     hotword_list = []
     for r in range(len(data_list)):
         scope = data_list[r]
-        if not scope: continue
+        if not scope:
+            if len(hotword) >= 2: hotword_list.append(hotword)
+            continue
         char = scope[0]
         if not char or ord(char) <= 0x7F or char in excludes:
             if len(hotword) >= 2: hotword_list.append(hotword)
