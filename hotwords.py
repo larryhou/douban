@@ -94,22 +94,24 @@ def strip_redundants(data_list:List[Tuple[str, int]]):
 
 def iterate_search(data_list:typing.List[str], hotword:str):
     concat_map = {}
+    hotword_list = []
     for r in range(len(data_list)):
         scope = data_list[r]
         if not scope: continue
         char = scope[0]
-        if not char or ord(char) <= 0x7F or char in excludes: continue
+        if not char or ord(char) <= 0x7F or char in excludes:
+            if len(hotword) >= 2: hotword_list.append(hotword)
+            continue
         if char not in concat_map: concat_map[char] = [0, []]
         concat_map[char][0] += 1
         concat_map[char][1].append(scope[1:])
-    result = []
     for char in concat_map.keys():
         num, data_list = concat_map.get(char)
         if num == 1 and len(hotword) > 1:
-            result.append(hotword)
+            hotword_list.append(hotword)
             continue
-        result += iterate_search(data_list, hotword + char)
-    return result
+        hotword_list += iterate_search(data_list, hotword + char)
+    return hotword_list
 
 if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
@@ -131,7 +133,11 @@ if __name__ == '__main__':
     if options.webpage:
         response = requests.get(url=text_path)
         if response.status_code == 200:
-            content = pyquery.PyQuery(response.text).find('body')
+            html = pyquery.PyQuery(response.text)
+            if html.find('div.article'):
+                content = html.find('div.article div.main')
+            else:
+                content = html.find('body')
             content.find('script').remove()
             content.find('style').remove()
             debug.log('load')
