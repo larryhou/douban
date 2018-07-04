@@ -147,7 +147,7 @@ if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
     arguments.add_argument('--command', '-c', default=commands.dump_poem, choices=commands.option_chocies())
     arguments.add_argument('--dont-cache', '-d', action='store_true')
-    arguments.add_argument('--sleep-time', '-t', default=0.5)
+    arguments.add_argument('--sleep-time', '-t', default=0.1, type=float)
     options = commens.options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
     global connection, cursor
     connection = sqlite3.connect('poem.sqlite')
