@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+import argparse, sys, os, io, typing, time
+from typing import Tuple, List
+from functools import cmp_to_key
+excludes = tuple('。，；：…（）《》？！、“”—[]【】°的了个这')
+
+class elapse_dubugger(object):
+    def __init__(self):
+        self.__time = time.clock()
+
+    def log(self, name:str):
+        t = time.clock()
+        print('{:6.3f}ms {}'.format(1000*(t - self.__time), name))
+        self.__time = t
+
+def caculate_hotwords(buffer:io.StringIO):
+    char_map = {}
+    while True:
+        char = buffer.read(1) # type:str
+        if not char: break
+        if ord(char) <= 0x7F or char in excludes: continue
+        if char not in char_map: char_map[char] = [0, []]
+        position = buffer.tell()
+        scope = buffer.read(10)
+        buffer.seek(position)
+        item = char_map[char]
+        item[1].append(scope)
+        item[0] += 1
+    debug.log('char')
+    char_list = list(char_map.keys())
+    temp_list = []
+    for char in char_list:
+        if char_map[char][0] > 2: temp_list.append(char)
+    char_list = temp_list
+    def char_rank_sort(a, b):
+        return -1 if char_map[a][0] > char_map[b][0] else 1
+    char_list.sort(key=cmp_to_key(char_rank_sort))
+    debug.log('char-sort')
+    strip_map = {}
+    for char in char_list:
+        item = char_map[char]
+        data_list = item[1] # type: list[str]
+        result = iterate_search(data_list, char)
+        for word in result:
+            if word not in strip_map: strip_map[word] = 0
+            strip_map[word] += 1
+    word_list = []
+    debug.log('search-hotword')
+    for word in strip_map.keys():
+        num = strip_map[word]
+        if num == 1: continue
+        word_list.append((word, num))
+    debug.log('strip-fewer')
+    word_list = strip_redundants(data_list=word_list)
+    debug.log('strip-redundants')
+    def hotword_rank_sort(a:Tuple[str, int], b:Tuple[str, int]):
+        if a[1] != b[1]: return 1 if a[1] > b[1] else -1
+        if len(a[0]) != len(b[0]): return 1 if len(a[0]) > len(b[0]) else -1
+        return 1 if a[0] > b[0] else -1
+    word_list.sort(key=cmp_to_key(hotword_rank_sort))
+    debug.log('sort')
+    for word, num in word_list:
+        print(word, num)
+
+def strip_redundants(data_list:List[Tuple[str, int]]):
+    temp_list = [] # type: list[tuple[str, str, int]]
+    for item in data_list:
+        temp_list.append((item[0][-2:][::-1], item[0], item[1]))
+    def reverse_rank_sort(a, b):
+        if a[0] != b[0]: return 1 if a[0] > b[0] else -1
+        return -1 if a[-1] > b[-1] else 1
+    temp_list.sort(key=cmp_to_key(reverse_rank_sort))
+    result, keytag, depth = [], None, 0
+    for n in range(len(temp_list)):
+        tag, word, num = temp_list[n]
+        if keytag != tag: keytag, depth = tag, 0
+        depth += 1
+        redundant = False
+        for r in range(0, min(depth, len(result))):
+            hotword, _ = result[r] # type: str
+            if hotword.endswith(word):
+                redundant = True
+                break
+        if not redundant:
+            result.insert(0, (word, num))
+    return result
+
+def iterate_search(data_list:typing.List[str], hotword:str):
+    concat_map = {}
+    for r in range(len(data_list)):
+        scope = data_list[r]
+        if not scope: continue
+        char = scope[0]
+        if not char or ord(char) <= 0x7F or char in excludes: continue
+        if char not in concat_map: concat_map[char] = [0, []]
+        concat_map[char][0] += 1
+        concat_map[char][1].append(scope[1:])
+    result = []
+    for char in concat_map.keys():
+        num, data_list = concat_map.get(char)
+        if num == 1 and len(hotword) > 1:
+            result.append(hotword)
+            continue
+        result += iterate_search(data_list, hotword + char)
+    return result
+
+if __name__ == '__main__':
+    arguments = argparse.ArgumentParser()
+    arguments.add_argument('--file-path', '-f', required=True)
+    options = arguments.parse_args(sys.argv[1:])
+    text_path = options.file_path
+    global debug
+    debug = elapse_dubugger()
+    assert os.path.exists(text_path)
+    with open(text_path, 'r+') as fp:
+        data = io.StringIO(fp.read())
+        caculate_hotwords(buffer=data)
