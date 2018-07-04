@@ -9,7 +9,7 @@ class elapse_dubugger(object):
         self.__time = time.clock()
 
     def log(self, name:str):
-        print('{:6.3f}ms {}'.format(1000*(time.clock() - self.__time), name))
+        print('{:7.3f}ms {}'.format(1000*(time.clock() - self.__time), name))
         self.__time = time.clock()
 
 def caculate_hotwords(buffer:io.StringIO):
@@ -20,7 +20,7 @@ def caculate_hotwords(buffer:io.StringIO):
         if ord(char) <= 0x7F or char in excludes: continue
         if char not in char_map: char_map[char] = [0, []]
         position = buffer.tell()
-        scope = buffer.read(10)
+        scope = buffer.read(scope_depth)
         buffer.seek(position)
         item = char_map[char]
         item[1].append(scope)
@@ -108,10 +108,12 @@ if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
     arguments.add_argument('--text-path', '-p', required=True)
     arguments.add_argument('--webpage', '-w', action='store_true')
+    arguments.add_argument('--depth', '-d', type=int, default=10)
     options = arguments.parse_args(sys.argv[1:])
     text_path = options.text_path
-    global debug
+    global debug, scope_depth
     debug = elapse_dubugger()
+    scope_depth = options.depth
 
     if options.webpage:
         response = requests.get(url=text_path)
