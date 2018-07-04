@@ -134,8 +134,9 @@ if __name__ == '__main__':
         response = requests.get(url=text_path)
         if response.status_code == 200:
             html = pyquery.PyQuery(response.text)
-            if html.find('div.article'):
-                content = html.find('div.article div.main')
+            douban_article_content = html.find('div.article div.main')
+            if douban_article_content:
+                content = douban_article_content
             else:
                 content = html.find('body')
             content.find('script').remove()
