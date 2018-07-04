@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, sys, os, io, typing, time
+import argparse, sys, os, io, typing, time, pyquery, requests
 from typing import Tuple, List
 from functools import cmp_to_key
 excludes = tuple('。，；：…（）《》？！、“”—[]【】°的了个这')
@@ -67,7 +67,8 @@ def strip_redundants(data_list:List[Tuple[str, int]]):
         temp_list.append((item[0][-1:-3:-1], item[0], item[1]))
     def reverse_rank_sort(a, b):
         if a[0] != b[0]: return 1 if a[0] > b[0] else -1
-        return -1 if a[-1] > b[-1] else 1
+        if a[-1] != b[-1]: return -1 if a[-1] > b[-1] else 1
+        return -1 if len(a[1]) > len(b[1]) else 1
     temp_list.sort(key=cmp_to_key(reverse_rank_sort))
     result, keytag, depth = [], None, 0
     for n in range(len(temp_list)):
@@ -105,12 +106,26 @@ def iterate_search(data_list:typing.List[str], hotword:str):
 
 if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
-    arguments.add_argument('--file-path', '-f', required=True)
+    arguments.add_argument('--text-path', '-p', required=True)
+    arguments.add_argument('--webpage', '-w', action='store_true')
     options = arguments.parse_args(sys.argv[1:])
-    text_path = options.file_path
+    text_path = options.text_path
     global debug
     debug = elapse_dubugger()
-    assert os.path.exists(text_path)
-    with open(text_path, 'r+') as fp:
-        data = io.StringIO(fp.read())
-        caculate_hotwords(buffer=data)
+
+    if options.webpage:
+        response = requests.get(url=text_path)
+        if response.status_code == 200:
+            content = pyquery.PyQuery(response.text).find('body')
+            content.find('script').remove()
+            content.find('style').remove()
+            debug.log('load')
+            caculate_hotwords(buffer=io.StringIO(content.text()))
+        else:
+            print(pyquery.PyQuery(response.text).find('body').text())
+    else:
+        assert os.path.exists(text_path)
+        with open(text_path, 'r+') as fp:
+            data = io.StringIO(fp.read())
+            debug.log('read')
+            caculate_hotwords(buffer=data)
