@@ -2,7 +2,7 @@
 import argparse, sys, os, io, typing, time, pyquery, requests
 from typing import Tuple, List
 from functools import cmp_to_key
-excludes = tuple('。，；：…（）《》？！、“”—[]【】°的了个这')
+excludes = tuple('。，；：…（）《》？！、“”—[]【】°的')
 
 class elapse_dubugger(object):
     def __init__(self):
