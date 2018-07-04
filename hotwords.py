@@ -9,9 +9,8 @@ class elapse_dubugger(object):
         self.__time = time.clock()
 
     def log(self, name:str):
-        t = time.clock()
-        print('{:6.3f}ms {}'.format(1000*(t - self.__time), name))
-        self.__time = t
+        print('{:6.3f}ms {}'.format(1000*(time.clock() - self.__time), name))
+        self.__time = time.clock()
 
 def caculate_hotwords(buffer:io.StringIO):
     char_map = {}
@@ -50,7 +49,7 @@ def caculate_hotwords(buffer:io.StringIO):
         num = strip_map[word]
         if num == 1: continue
         word_list.append((word, num))
-    debug.log('strip-fewer')
+    debug.log('strip-none')
     word_list = strip_redundants(data_list=word_list)
     debug.log('strip-redundants')
     def hotword_rank_sort(a:Tuple[str, int], b:Tuple[str, int]):
