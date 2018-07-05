@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import sqlite3, pyquery, time, requests, sys
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 class WebpageSpider(object):
     def __init__(self, connection:sqlite3.Connection):
@@ -38,7 +38,7 @@ class WebpageSpider(object):
         self.__connection.commit()
         if close: self.__connection.close()
 
-    def fetch_html_document(self, url:str, headers = None, dont_cache:bool = False, sleep_time:float = 0.5)->pyquery.PyQuery:
+    def fetch_html_document(self, url:str, headers:Dict[str, str] = None, dont_cache:bool = False, sleep_time:float = 0.5)->pyquery.PyQuery:
         command = 'SELECT html FROM {} WHERE link=?'.format(self.__table_name)
         result = self.__cursor.execute(command, (url,))
         record = result.fetchone()
