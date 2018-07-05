@@ -61,8 +61,7 @@ class WebpageSpider(object):
         return pyquery.PyQuery(html_content)
 
 if __name__ == '__main__':
-    connection = sqlite3.connect('spider.sqlite')
-    spider = WebpageSpider(connection)
+    spider = WebpageSpider(connection=sqlite3.connect('spider.sqlite'))
     html = spider.fetch_html_document('https://movie.douban.com/review/9434975/')
     print(html.text())
     spider.commit(close_sqlite=True)
