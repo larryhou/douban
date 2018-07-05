@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-import sqlite3, commens, requests, time
-from spider import WebpageSpider
+import sqlite3, requests, time
 from pyquery import PyQuery
-from typing import Tuple, List
+from spider import WebpageSpider
 
 class tables(object):
     song = 'song'
@@ -19,7 +18,7 @@ class commands(object):
             if name.replace('_', '-') == value: choice_list.append(value)
         return choice_list
 
-def create_tables():
+def create_sqlite_tables():
     spider.create_table(name=tables.song, fields=[
         'title text NOT NULL UNIQUE ON CONFLICT REPLACE',
         'author text',
@@ -118,7 +117,7 @@ if __name__ == '__main__':
     options = ArgumentOptions(data=arguments.parse_args(sys.argv[1:]))
     global spider
     spider = WebpageSpider(connection=sqlite3.connect('b.sqlite'))
-    create_tables()
+    create_sqlite_tables()
     if options.command == commands.dump_poem:
         dump_poems()
     elif options.command == commands.dump_song:
