@@ -34,9 +34,9 @@ class WebpageSpider(object):
         '''.format(name, ','.join(['?'] * len(data_rows[0])))
         self.__cursor.executemany(insert_command, data_rows)
 
-    def commit(self, close:bool = False):
+    def commit(self, close_sqlite:bool = False):
         self.__connection.commit()
-        if close: self.__connection.close()
+        if close_sqlite: self.__connection.close()
 
     def fetch_html_document(self, url:str, headers:Dict[str, str] = None, dont_cache:bool = False, sleep_time:float = 0.5)->pyquery.PyQuery:
         command = 'SELECT html FROM {} WHERE link=?'.format(self.__table_name)
@@ -65,4 +65,4 @@ if __name__ == '__main__':
     spider = WebpageSpider(connection)
     html = spider.fetch_html_document('https://movie.douban.com/review/9434975/')
     print(html.text())
-    spider.commit(close=True)
+    spider.commit(close_sqlite=True)
