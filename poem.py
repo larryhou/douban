@@ -11,6 +11,7 @@ class tables(object):
 class commands(object):
     dump_poem = 'dump-poem'
     dump_song = 'dump-song'
+    dump_disk = 'dump-disk'
 
     @classmethod
     def option_chocies(cls):
@@ -129,6 +130,24 @@ def dump_poems():
         dump_author_poems(url='https://so.gushiwen.org/authors/authorvsw.aspx?page=1&id={}'.format(author_uid))
         spider.commit()
 
+def dump_poems_to_disk():
+    import os
+    from pypinyin import lazy_pinyin as pinyin
+    connection = sqlite3.connect('poem.sqlite')
+    cursor = connection.cursor()
+    output_path = 'poem'
+    if not os.path.exists(output_path): os.mkdir(output_path)
+    os.chdir(output_path)
+    for author, uid in cursor.execute('SELECT DISTINCT author,uid FROM poem').fetchall():
+        author = author.split('-')[-1]
+        file_name = '{}.txt'.format('_'.join(pinyin(author)))
+        fp = open(file_name, 'w+')
+        for poem_text, in cursor.execute('SELECT poem FROM poem WHERE uid=?', (uid,)).fetchall():
+            fp.write(poem_text)
+            fp.write('|')
+        fp.close()
+        print(author, os.path.abspath(file_name))
+
 if __name__ == '__main__':
     import argparse, sys
     arguments = argparse.ArgumentParser()
@@ -143,4 +162,6 @@ if __name__ == '__main__':
         dump_poems()
     elif options.command == commands.dump_song:
         dump_songs()
+    elif options.command == commands.dump_disk:
+        dump_poems_to_disk()
     spider.commit(True)
