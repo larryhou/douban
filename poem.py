@@ -144,7 +144,7 @@ def dump_poems_to_disk():
         fp = open(file_name, 'w+')
         for poem_text, in cursor.execute('SELECT poem FROM poem WHERE uid=?', (uid,)).fetchall():
             fp.write(poem_text)
-            fp.write('|')
+            fp.write('\n\n')
         fp.close()
         print(author, os.path.abspath(file_name))
 
