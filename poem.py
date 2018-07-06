@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import sqlite3, requests, time
+import sqlite3, requests, time, re
 from pyquery import PyQuery
 from spider import WebpageSpider
+from typing import Dict
 
 class tables(object):
     song = 'song'
@@ -75,19 +76,39 @@ def dump_songs():
         ])
         spider.commit()
 
+def decode_params(url:str)->Dict[str, str]:
+    result = {}
+    for name, value in [tuple(x.split('=')) for x in url.split('?')[-1].split('&')]:
+        result[name] = value
+    return result
+
 def dump_author_poems(url:str):
+    if url.rfind('?') > 0:
+        params = decode_params(url)
+        uid = params['id']
+        pid = params['page']
+    else:
+        data = url.split('/')[-1].split('_')[-1].split('.')[0]
+        pattern = re.compile(r'A(\d+)$')
+        uid = pattern.sub('', data)
+        pid = pattern.search(data).group(1)
+
     html = spider.fetch_html_document(url=url)
     for item in html.find('div.main3 div.left div.sons'):
         node = PyQuery(item)
         content_node = node.find('div.cont')
-        title = content_node.find('div.yizhu').next().text()
-        author = content_node.find('p.source').text().replace('：','-')
-        poem_text = content_node.find('div.contson').text()
-        tags = node.find('div.tag').text().replace(' ', '').replace('，', ';')
+        title = PyQuery(content_node.find('div.yizhu')[0]).next().text()
+        author = PyQuery(content_node.find('p.source')[0]).text().replace('：','-')
+        poem_text = PyQuery(content_node.find('div.contson')[0]).text()
+        tags_node = node.find('div.tag')
+        if tags_node:
+            tags = PyQuery(tags_node[0]).text().replace(' ', '').replace('，', ';')
+        else:
+            tags = None
         id = node.find('div.yizhu img').attr('onclick').split('\'')[1]
         print(title, author, tags, id)
         spider.insert_table(name=tables.poem, data_rows=[
-            (id, title, author, poem_text, tags if tags else None)
+            (id, title, author, poem_text, tags, pid, uid)
         ])
     spider.commit()
     paginator = html.find('div.pagesright a.amore')
