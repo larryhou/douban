@@ -61,7 +61,7 @@ class SvgPath(object):
     def close_path(self):
         self.__data.write('z')
 
-    def draw_catmull_rom_splines(self, points:List[Tuple[float, float]], interpolate_density:int = 10):
+    def catmull_rom(self, points:List[Tuple[float, float]], interpolate_density:int = 10):
         points = points.copy()
         points.insert(0, points[0])
         points.append(points[-1])
@@ -121,5 +121,5 @@ if __name__ == '__main__':
 
     path.clear()
     path.move_to(0, 200)
-    path.draw_catmull_rom_splines(pts, interpolate_density=20)
+    path.catmull_rom(pts, interpolate_density=20)
     print(path)
