@@ -69,7 +69,7 @@ class SvgPath(object):
             control_points = points[m - 1], points[m], points[m + 1], points[m + 2]
             for i in range(interpolate_density + 1):
                 position = interpolate_with_catmull_rom(*control_points, t=i / interpolate_density)
-                self.line_to(position[0], position[1])
+                self.line_to(*position)
 
     def __repr__(self):
         position = self.__data.tell()
