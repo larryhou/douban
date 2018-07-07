@@ -1,75 +1,85 @@
 #!/usr/bin/env python3
 import io
-from typing import Tuple
+from typing import Tuple, List
 
 class SvgPath(object):
     def __init__(self):
-        self.data = io.StringIO()
+        self.__data = io.StringIO()
 
     def clear(self):
-        self.data.truncate(0)
+        self.__data.truncate(0)
 
     def move_to(self, x:float, y:float, absolute:bool = True):
-        self.data.write('{} {} {} '.format('M' if absolute else 'm', x, y))
+        self.__data.write('{} {} {} '.format('M' if absolute else 'm', x, y))
 
     def line_to(self, x:float, y:float, absolute:bool = True):
-        self.data.write('{} {} {} '.format('L' if absolute else 'l', x, y))
+        self.__data.write('{} {} {} '.format('L' if absolute else 'l', x, y))
 
     def line_xto(self, x:float, absolute:bool = True):
-        self.data.write('{} {} '.format('H' if absolute else 'h', x))
+        self.__data.write('{} {} '.format('H' if absolute else 'h', x))
 
     def line_yto(self, y:float, absolute:bool = True):
-        self.data.write('{} {} '.format('V' if absolute else 'v', y))
+        self.__data.write('{} {} '.format('V' if absolute else 'v', y))
 
     '''
     Draws a cubic Bézier curve from the current point to (x,y) using (x1,y1) as the control point at the beginning of the curve and (x2,y2) as the control point at the end of the curve. C (uppercase) indicates that absolute coordinates will follow; c (lowercase) indicates that relative coordinates will follow. Multiple sets of coordinates may be specified to draw a polybézier. At the end of the command, the new current point becomes the final (x,y) coordinate pair used in the polybézier.
     '''
     def cubic_curve_to(self, c1:Tuple[float, float], c2:Tuple[float, float], e:Tuple[float, float], absolute:bool = True):
-        self.data.write('{} {},{} {},{} {},{} '.format('C' if absolute else 'c',
-                                                       c1[0], c1[1], c2[0], c2[1], e[0], e[1]))
+        self.__data.write('{} {},{} {},{} {},{} '.format('C' if absolute else 'c',
+                                                         c1[0], c1[1], c2[0], c2[1], e[0], e[1]))
 
     '''
     Draws a cubic Bézier curve from the current point to (x,y). The first control point is assumed to be the reflection of the second control point on the previous command relative to the current point. (If there is no previous command or if the previous command was not an C, c, S or s, assume the first control point is coincident with the current point.) (x2,y2) is the second control point (i.e., the control point at the end of the curve). S (uppercase) indicates that absolute coordinates will follow; s (lowercase) indicates that relative coordinates will follow. Multiple sets of coordinates may be specified to draw a polybézier. At the end of the command, the new current point becomes the final (x,y) coordinate pair used in the polybézier.
     '''
     def append_cubic_curve_to(self, c:Tuple[float, float], e:Tuple[float, float], absolute:bool = True):
-        self.data.write('{} {},{} {},{} '.format('S' if absolute else 's',
-                                                 c[0], c[1], e[0], e[1]))
+        self.__data.write('{} {},{} {},{} '.format('S' if absolute else 's',
+                                                   c[0], c[1], e[0], e[1]))
 
     '''
     Draws a quadratic Bézier curve from the current point to (x,y) using (x1,y1) as the control point. Q (uppercase) indicates that absolute coordinates will follow; q (lowercase) indicates that relative coordinates will follow. Multiple sets of coordinates may be specified to draw a polybézier. At the end of the command, the new current point becomes the final (x,y) coordinate pair used in the polybézier.
     '''
     def curve_to(self, c:Tuple[float, float], e:Tuple[float, float], absolute:bool = True):
-        self.data.write('{} {},{} {},{} '.format('Q' if absolute else 'q',
-                                                 c[0], c[1], e[0], e[1]))
+        self.__data.write('{} {},{} {},{} '.format('Q' if absolute else 'q',
+                                                   c[0], c[1], e[0], e[1]))
 
     '''
     Draws a quadratic Bézier curve from the current point to (x,y). The control point is assumed to be the reflection of the control point on the previous command relative to the current point. (If there is no previous command or if the previous command was not a Q, q, T or t, assume the control point is coincident with the current point.) T (uppercase) indicates that absolute coordinates will follow; t (lowercase) indicates that relative coordinates will follow. At the end of the command, the new current point becomes the final (x,y) coordinate pair used in the polybézier.
     '''
     def append_curve_to(self, e:Tuple[float, float], absolute:bool = True):
-        self.data.write('{} {},{} '.format('T' if absolute else 't', e[0], e[1]))
+        self.__data.write('{} {},{} '.format('T' if absolute else 't', e[0], e[1]))
 
     '''
     Draws an elliptical arc from the current point to (x, y). The size and orientation of the ellipse are defined by two radii (rx, ry) and an x-axis-rotation, which indicates how the ellipse as a whole is rotated relative to the current coordinate system. The center (cx, cy) of the ellipse is calculated automatically to satisfy the constraints imposed by the other parameters. large-arc-flag and sweep- flag contribute to the automatic calculations and help determine how the arc is drawn.
     '''
     def arc(self, radius:Tuple[float, float], e:Tuple[float, float], axis_rotation:float = 0, large_arc:bool = True, clockwise:bool = True, absolute:bool = True):
-        self.data.write('{} {},{} {} {},{} {},{} '.format('A' if absolute else 'a',
-                                                         radius[0], radius[1], axis_rotation, int(large_arc), int(clockwise), e[0], e[1]))
+        self.__data.write('{} {},{} {} {},{} {},{} '.format('A' if absolute else 'a',
+                                                            radius[0], radius[1], axis_rotation, int(large_arc), int(clockwise), e[0], e[1]))
 
     '''
     Close the current subpath by drawing a straight line from the current point to current subpath's initial point.
     '''
     def close_path(self):
-        self.data.write('z')
+        self.__data.write('z')
+
+    def draw_catmull_rom_splines(self, points:List[Tuple[float, float]], interpolate_density:int = 10):
+        points = points.copy()
+        points.insert(0, points[0])
+        points.append(points[-1])
+        for m in range(1, len(points) - 2):
+            control_points = points[m - 1], points[m], points[m + 1], points[m + 2]
+            for i in range(interpolate_density + 1):
+                position = interpolate_with_catmull_rom(*control_points, t=i / interpolate_density)
+                self.line_to(position[0], position[1])
 
     def __repr__(self):
-        position = self.data.tell()
-        self.data.seek(0)
-        data = self.data.read()
-        self.data.seek(position)
+        position = self.__data.tell()
+        self.__data.seek(0)
+        data = self.__data.read()
+        self.__data.seek(position)
         return data
 
 # @see http://www.mvps.org/directx/articles/catmull/
-def catmull_rom(p0:Tuple[float, float], p1:Tuple[float, float], p2:Tuple[float, float], p3:Tuple[float,float],t:float):
+def interpolate_with_catmull_rom(p0:Tuple[float, float], p1:Tuple[float, float], p2:Tuple[float, float], p3:Tuple[float, float], t:float):
     t1 = t
     t2 = t1 * t
     t3 = t2 * t
@@ -111,10 +121,5 @@ if __name__ == '__main__':
 
     path.clear()
     path.move_to(0, 200)
-    density = 20
-    for n in range(1, len(pts) - 2):
-        points = pts[n - 1], pts[n], pts[n + 1], pts[n + 2]
-        for i in range(density + 1):
-            point = catmull_rom(*points, t=i / density)
-            path.line_to(point[0], point[1])
+    path.draw_catmull_rom_splines(pts, interpolate_density=20)
     print(path)
