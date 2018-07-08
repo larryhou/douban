@@ -109,6 +109,10 @@ class SvgElement(object):
     def __init__(self, element:etree._Element):
         self.__element = element
 
+    @property
+    def id(self)->str:
+        return self.__element.get('id')
+
     def stroke(self, thickness:float, color:str):
         self.__element.set('stroke', color)
         self.__element.set('stroke-width', repr(thickness))
@@ -265,7 +269,7 @@ class SvgGraphics(object):
         group_ref = self.__create_ref('group')
         self.__group = etree.fromstring('<g id="{}"/>'.format(group_ref))
         self.__context.append(self.__group)
-        return group_ref
+        return SvgElement(self.__group)
 
     def end_group(self):
         self.__group = None
