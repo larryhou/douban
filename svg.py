@@ -118,8 +118,17 @@ class SvgElement(object):
         self.__element.set('stroke-width', repr(thickness))
         return self
 
+    def stroke_gradient(self, thickness:float, gradient_ref:str):
+        self.__element.set('stroke', 'url(#{})'.format(gradient_ref))
+        self.__element.set('stroke-width', repr(thickness))
+        return self
+
     def fill(self, color:str):
         self.__element.set('fill', color)
+        return self
+
+    def fill_gradient(self, gradient_ref:str):
+        self.__element.set('fill', 'url(#{})'.format(gradient_ref))
         return self
 
     def move(self, x:float, y:float):
