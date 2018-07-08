@@ -303,7 +303,7 @@ class SvgGraphics(object):
 
     def __repr__(self):
         svg_bytes = etree.tostring(self.context, pretty_print=True, encoding='utf-8') # type: bytes
-        return svg_bytes.decode('utf-8')
+        return svg_bytes.decode('utf-8').replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
 
 if __name__ == '__main__':
     # path = SvgPath()
