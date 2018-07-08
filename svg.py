@@ -261,10 +261,11 @@ class SvgGraphics(object):
         self.__defs.append(gradient)
         return style_ref
 
-    def new_group(self)->etree._Element:
-        self.__group = etree.fromstring('<g id="{}"/>'.format(self.__create_ref('group')))
+    def new_group(self):
+        group_ref = self.__create_ref('group')
+        self.__group = etree.fromstring('<g id="{}"/>'.format(group_ref))
         self.__context.append(self.__group)
-        return self.__group
+        return group_ref
 
     def end_group(self):
         self.__group = None
