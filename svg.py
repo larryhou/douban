@@ -228,10 +228,6 @@ class SvgElement(object):
 
 class SvgGraphics(object):
     def __init__(self):
-        self.stroke_color = None
-        self.stroke_width = None
-        self.fill_color = None
-
         self.context = etree.fromstring('''
         <svg version="1.1" 
              xmlns:xlink="http://www.w3.org/1999/xlink"><defs/></svg>
