@@ -279,9 +279,12 @@ class SvgGraphics(object):
             self.__context.append(group)
         return SvgElement(group)
 
-    def end_group(self):
+    def end_group(self, exhaustive:bool = False):
         if len(self.__groups) > 0:
-            del self.__groups[-1]
+            if exhaustive:
+                self.__groups.clear()
+            else:
+                del self.__groups[-1]
 
     def new_clip_path(self):
         if self.__mask is not None: return
