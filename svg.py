@@ -238,7 +238,7 @@ class SvgGraphics(object):
         ''') # type: etree._Element
         self.__defs = self.__context.xpath('//defs')[0] # type: etree._Element
         self.__ref_counter = 1
-        self.__group = None # type: etree._Element
+        self.__groups = [] # type: List[etree._Element]
         self.__mask = None  # type: etree._Element
 
     def __create_ref(self, name:str):
@@ -250,8 +250,8 @@ class SvgGraphics(object):
         node = self.__context
         if self.__mask is not None:
             node = self.__mask
-        elif self.__group is not None:
-            node = self.__group
+        elif len(self.__groups) > 0:
+            node = self.__groups[-1]
         node.append(element) if visible else self.__defs.append(element)
 
     def create_linear_gradient(self, pt1:Tuple[float, float], pt2:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
@@ -272,12 +272,16 @@ class SvgGraphics(object):
 
     def new_group(self):
         group_ref = self.__create_ref('group')
-        self.__group = etree.fromstring('<g id="{}"/>'.format(group_ref))
-        self.__context.append(self.__group)
-        return SvgElement(self.__group)
+        group = etree.fromstring('<g id="{}"/>'.format(group_ref))
+        if len(self.__groups) > 0:
+            self.__groups[-1].append(group)
+        else:
+            self.__context.append(group)
+        return SvgElement(group)
 
     def end_group(self):
-        self.__group = None
+        if len(self.__groups) > 0:
+            del self.__groups[-1]
 
     def new_clip_path(self):
         if self.__mask is not None: return
