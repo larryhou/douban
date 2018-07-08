@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import io
+import io, enum
 from typing import Tuple, List
+from lxml import etree
 
 class SvgPath(object):
     def __init__(self):
@@ -90,36 +91,253 @@ def interpolate_with_catmull_rom(p0:Tuple[float, float], p1:Tuple[float, float],
     return (0.5 * (c0 * p0[0] + c1 * p1[0] + c2 * p2[0] + c3 * p3[0]),
             0.5 * (c0 * p0[1] + c1 * p1[1] + c2 * p2[1] + c3 * p3[1]))
 
+class spread_methods(object):
+    # spreadMethod = "pad | reflect | repeat"
+    repeat = 'repeat'
+    reflect = 'reflect'
+    pad = 'pad'
+
+class transforms(object):
+    translate = 'translate'
+    matrix = 'matrix'
+    rotate = 'rotate'
+    scale = 'scale'
+    skewX = 'skewX'
+    skewY = 'skewY'
+
+class SvgStyle(object):
+    def __init__(self, element:etree._Element):
+        self.__element = element
+
+    def stroke(self, thickness:float, color:str):
+        self.__element.set('stroke', color)
+        self.__element.set('stroke-width', repr(thickness))
+        return self
+
+    def fill(self, color:str):
+        self.__element.set('fill', color)
+        return self
+
+    def move(self, x:float, y:float):
+        self.__element.set('x', repr(x))
+        self.__element.set('y', repr(y))
+        return self
+
+    def size(self, width:float, height:float):
+        self.__element.set('width', repr(width))
+        self.__element.set('height', repr(height))
+        return self
+
+    def css(self, style:str):
+        self.__element.set('style', style)
+        return self
+
+    def __get(self, name:str):
+        value = self.__element.get(name)
+        if value is None:
+            value = ''
+            self.__element.set(name, value)
+        return value
+
+    def __set_transform(self, name:str, *params:float):
+        transform = self.__get('transform')
+        data_map = {}
+        closed, action_name, action_params = True, '', []
+        for char in transform:
+            if closed:
+                if char == '(':
+                    closed = False
+                    action_params = []
+                    item = ''
+                    continue
+                action_name += char
+            else:
+                if char == ')':
+                    closed = True
+                    action_name = action_name.strip()
+                    data_map[action_name] = action_params
+                    action_name = ''
+                if char not in ' ,)':
+                    item += char
+                else:
+                    if not item: continue
+                    action_params.append(float(item))
+                    item = ''
+        action_params = data_map.get(name)
+        if name in (transforms.scale, transforms.translate):
+            if action_params:
+                if len(params) == 1 and len(action_params) == 2:
+                    params = (params[0] + action_params[0], action_params[1])
+                else:
+                    params = (params[0] + action_params[0], action_params[1] + params[1])
+        elif name == transforms.rotate:
+            if action_params:
+                if len(params) == 1 and len(action_params) == 3:
+                    params = (params[0] + action_params[0], action_params[1], action_params[2])
+                else:
+                    params = (params[0] + action_params[0],)
+        data_map[name] = params
+        transform = ''
+        for name, params in data_map.items():
+            value = ''
+            params = [repr(x) for x in params]
+            if name in (transforms.translate,
+                        transforms.matrix,
+                        transforms.scale):
+                value = ','.join(params)
+            elif name in (transforms.skewX, transforms.skewY):
+                value = params[0]
+            elif name == transforms.rotate:
+                if len(params) == 1:
+                    value = '{}'.format(params[0])
+                else:
+                    value = '{} {},{}'.format(*params)
+            if not transform:
+                transform = '{}({})'.format(name, value)
+            else:
+                transform = '{} {}({})'.format(transform, name, value)
+        print(transform)
+        self.__element.set('transform', transform)
+
+    def matrix(self, a:float, b:float, c:float, d:float, e:float, f:float):
+        self.__set_transform('matrix', a, b, c, d, e, f)
+        return self
+
+    def scale(self, x:float, y:float):
+        self.__set_transform('scale', x, y)
+        return self
+
+    def translate(self, x:float, y:float):
+        self.__set_transform('translate', x, y)
+        return self
+
+    def rotate(self, angle:float, anchor:Tuple[float, float] = None):
+        if anchor is None:
+            self.__set_transform('rotate', angle)
+        else:
+            self.__set_transform('rotate', angle, *anchor)
+        return self
+
+    def skewX(self, angle:float):
+        self.__set_transform('skewX', angle)
+        return self
+
+    def skewY(self, angle:float):
+        self.__set_transform('skewY', angle)
+        return self
+
+class SvgGraphics(object):
+    def __init__(self):
+        self.stroke_color = None
+        self.stroke_width = None
+        self.fill_color = None
+
+        self.context = etree.fromstring('''
+        <svg version="1.1" 
+             xmlns:xlink="http://www.w3.org/1999/xlink"><defs/></svg>
+        ''') # type: etree._Element
+        self.defs = self.context.xpath('//defs')[0] # type: etree._Element
+        self.__ref_counter = 1
+        print(self.defs)
+
+    def __create_ref(self, name:str):
+        element_ref = '{}-{:03d}'.format(name, self.__ref_counter)
+        self.__ref_counter += 1
+        return element_ref
+
+    def __append_element(self, element, visiable:bool):
+        self.context.append(element) if visiable else self.defs.append(element)
+
+    def create_linear_gradient(self, pt1:Tuple[float, float], pt2:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
+        style_ref = self.__create_ref('linear-gradient')
+        gradient = etree.fromstring('<linearGradient id="{}" gradientUnits="userSpaceOnUse" x1="{}" y1="{}" x2="{}" y2="{}" spreadMethod="{}"/>'.format(style_ref, *pt1, *pt2, spread_method)) # type: etree._Element
+        for position, color, alpha in stops:
+            gradient.append('<stop offset="{}" stop-color="{}" stop-opacity="{}"/>'.format(position, color, alpha))
+        self.defs.append(gradient)
+        return style_ref
+
+    def create_radial_gradient(self, radius:float, center:Tuple[float, float], focal:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
+        style_ref = self.__create_ref('radial-gradient')
+        gradient = etree.fromstring('<linearGradient id="{}" gradientUnits="userSpaceOnUse" r="{}" cx="{}" cy="{}" fx="{}" fy="{}" spreadMethod="{}"/>'.format(style_ref, radius, *center, *focal, spread_method))  # type: etree._Element
+        for position, color, alpha in stops:
+            gradient.append('<stop offset="{}" stop-color="{}" stop-opacity="{}"/>'.format(position, color, alpha))
+        self.defs.append(gradient)
+        return style_ref
+
+    def draw_path(self, path:SvgPath, visiable:bool = True)->SvgStyle:
+        element = etree.fromstring('<path id="{}" d="{}"/>'.format(self.__create_ref('path'), path))
+        self.__append_element(element, visiable)
+        return SvgStyle(element)
+
+    def draw_rect(self, width:float, heigth:float, visiable:bool = True)->SvgStyle:
+        element = etree.fromstring('<rect id="{}" width="{}" height="{}"/>'.format(self.__create_ref('rect'), width, heigth))
+        self.__append_element(element, visiable)
+        return SvgStyle(element)
+
+    def draw_circle(self, radius:float, center:Tuple[float, float], visiable:bool = True):
+        element = etree.fromstring(
+            '<circle id="{}" radius="{}" cx="{}" cy="{}"/>'.format(self.__create_ref('circle'), radius, *center))
+        self.__append_element(element, visiable)
+        return SvgStyle(element)
+
+    def draw_ellipse(self, radius:Tuple[float, float], center:Tuple[float, float], visiable:bool = True):
+        element = etree.fromstring(
+            '<ellipse id="{}" rx="{}" ry="{}" cx="{}" cy="{}"/>'.format(self.__create_ref('ellipse'), *radius, *center))
+        self.__append_element(element, visiable)
+        return SvgStyle(element)
+
+    def draw_line(self, pt1:Tuple[float, float], pt2:Tuple[float, float], visiable:bool = True):
+        element = etree.fromstring(
+            '<line id="{}" x1="{}" y1="{}" x2="{}" y2="{}"/>'.format(self.__create_ref('line'), *pt1, *pt2))
+        self.__append_element(element, visiable)
+        return SvgStyle(element)
+
+    def draw_polygon(self, vertex:List[Tuple[float, float]], visiable:bool = True):
+        element = etree.fromstring(
+            '<polygon id="{}" points="{}"/>'.format(self.__create_ref('polygon'), ' '.join(['{},{}'.format(*x) for x in vertex])))
+        self.__append_element(element, visiable)
+        return SvgStyle(element)
+
+    def draw_polyline(self, points:List[Tuple[float, float]], visiable:bool = True):
+        element = etree.fromstring(
+            '<polyline id="{}" points="{}"/>'.format(self.__create_ref('polyline'),
+                                                    ' '.join(['{},{}'.format(*x) for x in points])))
+        self.__append_element(element, visiable)
+        return SvgStyle(element)
+
+    def __repr__(self):
+        svg_bytes = etree.tostring(self.context, pretty_print=True, encoding='utf-8') # type: bytes
+        return svg_bytes.decode('utf-8')
+
 if __name__ == '__main__':
-    path = SvgPath()
-    path.move_to(0, 0)
-    path.line_to(-1, -1)
-    path.line_xto(1)
-    path.line_yto(1)
-    path.cubic_curve_to(c1=(1,1), c2=(2,2), e=(3,3))
-    path.append_cubic_curve_to(c=(4, 4), e=(5, 5))
-    path.arc((10,15),(100,100))
-    print(path)
-
-    pts = []
-
-    path.clear()
-    path.move_to(0, 200)
-    pts.append((0, 200))
-    pts.append(pts[0])
-    path.curve_to((50, 200),(100, 200))
-    offset = (100, 200)
-    pts.append(offset)
-    import random
-    for n in range(10):
-        point = random.randint(10, 50) + offset[0], random.randint(-50, 50) + offset[1]
-        pts.append(point)
-        offset = point
-        path.append_curve_to(point)
-    print(path)
-    pts.append(pts[-1])
-
-    path.clear()
-    path.move_to(0, 200)
-    path.catmull_rom(pts, interpolate_density=20)
-    print(path)
+    # path = SvgPath()
+    # pts = []
+    # path.clear()
+    # path.move_to(0, 200)
+    # pts.append((0, 200))
+    # pts.append(pts[0])
+    # path.curve_to((50, 200),(100, 200))
+    # offset = (100, 200)
+    # pts.append(offset)
+    # import random
+    # for n in range(10):
+    #     point = random.randint(10, 50) + offset[0], random.randint(-50, 50) + offset[1]
+    #     pts.append(point)
+    #     offset = point
+    #     path.append_curve_to(point)
+    # print(path)
+    # pts.append(pts[-1])
+    #
+    # path.clear()
+    # path.move_to(0, 200)
+    # path.catmull_rom(pts, interpolate_density=20)
+    # print(path)
+    graphics = SvgGraphics()
+    graphics.draw_rect(10, 100).stroke(1.5, 'red')\
+        .rotate(30, (5, 50))\
+        .translate(-15, 35)\
+        .scale(1.2, 1.2)\
+        .fill('green')\
+        .rotate(20)\
+        .translate(100,100).skewX(10).skewY(10).matrix(1,2,3,4,5,6)
+    print(graphics.__repr__())
