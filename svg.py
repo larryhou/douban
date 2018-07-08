@@ -196,7 +196,7 @@ class SvgElement(object):
                 transform = '{}({})'.format(name, value)
             else:
                 transform = '{} {}({})'.format(transform, name, value)
-        print(transform)
+        # print(transform)
         self.__element.set('transform', transform)
 
     def matrix(self, a:float, b:float, c:float, d:float, e:float, f:float):
@@ -228,28 +228,29 @@ class SvgElement(object):
 
 class SvgGraphics(object):
     def __init__(self):
-        self.context = etree.fromstring('''
+        self.__context = etree.fromstring('''
         <svg version="1.1" 
              xmlns:xlink="http://www.w3.org/1999/xlink"><defs/></svg>
         ''') # type: etree._Element
-        self.defs = self.context.xpath('//defs')[0] # type: etree._Element
+        self.__defs = self.__context.xpath('//defs')[0] # type: etree._Element
         self.__ref_counter = 1
-        print(self.defs)
+        self.__group = None
 
     def __create_ref(self, name:str):
         element_ref = '{}-{:03d}'.format(name, self.__ref_counter)
         self.__ref_counter += 1
         return element_ref
 
-    def __append_element(self, element, visiable:bool):
-        self.context.append(element) if visiable else self.defs.append(element)
+    def __append_element(self, element, visible:bool):
+        node = self.__group if self.__group else self.__context
+        node.append(element) if visible else self.__defs.append(element)
 
     def create_linear_gradient(self, pt1:Tuple[float, float], pt2:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
         style_ref = self.__create_ref('linear-gradient')
         gradient = etree.fromstring('<linearGradient id="{}" gradientUnits="userSpaceOnUse" x1="{}" y1="{}" x2="{}" y2="{}" spreadMethod="{}"/>'.format(style_ref, *pt1, *pt2, spread_method)) # type: etree._Element
         for position, color, alpha in stops:
             gradient.append('<stop offset="{}" stop-color="{}" stop-opacity="{}"/>'.format(position, color, alpha))
-        self.defs.append(gradient)
+        self.__defs.append(gradient)
         return style_ref
 
     def create_radial_gradient(self, radius:float, center:Tuple[float, float], focal:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
@@ -257,52 +258,60 @@ class SvgGraphics(object):
         gradient = etree.fromstring('<linearGradient id="{}" gradientUnits="userSpaceOnUse" r="{}" cx="{}" cy="{}" fx="{}" fy="{}" spreadMethod="{}"/>'.format(style_ref, radius, *center, *focal, spread_method))  # type: etree._Element
         for position, color, alpha in stops:
             gradient.append('<stop offset="{}" stop-color="{}" stop-opacity="{}"/>'.format(position, color, alpha))
-        self.defs.append(gradient)
+        self.__defs.append(gradient)
         return style_ref
 
-    def draw_path(self, path:SvgPath, visiable:bool = True)->SvgElement:
+    def new_group(self)->etree._Element:
+        self.__group = etree.fromstring('<g id="{}"/>'.format(self.__create_ref('group')))
+        self.__context.append(self.__group)
+        return self.__group
+
+    def end_group(self):
+        self.__group = None
+
+    def draw_path(self, path:SvgPath, visible:bool = True)->SvgElement:
         element = etree.fromstring('<path id="{}" d="{}"/>'.format(self.__create_ref('path'), path))
-        self.__append_element(element, visiable)
+        self.__append_element(element, visible)
         return SvgElement(element)
 
-    def draw_rect(self, width:float, heigth:float, visiable:bool = True)->SvgElement:
+    def draw_rect(self, width:float, heigth:float, visible:bool = True)->SvgElement:
         element = etree.fromstring('<rect id="{}" width="{}" height="{}"/>'.format(self.__create_ref('rect'), width, heigth))
-        self.__append_element(element, visiable)
+        self.__append_element(element, visible)
         return SvgElement(element)
 
-    def draw_circle(self, radius:float, center:Tuple[float, float], visiable:bool = True):
+    def draw_circle(self, radius:float, center:Tuple[float, float], visible:bool = True):
         element = etree.fromstring(
             '<circle id="{}" radius="{}" cx="{}" cy="{}"/>'.format(self.__create_ref('circle'), radius, *center))
-        self.__append_element(element, visiable)
+        self.__append_element(element, visible)
         return SvgElement(element)
 
-    def draw_ellipse(self, radius:Tuple[float, float], center:Tuple[float, float], visiable:bool = True):
+    def draw_ellipse(self, radius:Tuple[float, float], center:Tuple[float, float], visible:bool = True):
         element = etree.fromstring(
             '<ellipse id="{}" rx="{}" ry="{}" cx="{}" cy="{}"/>'.format(self.__create_ref('ellipse'), *radius, *center))
-        self.__append_element(element, visiable)
+        self.__append_element(element, visible)
         return SvgElement(element)
 
-    def draw_line(self, pt1:Tuple[float, float], pt2:Tuple[float, float], visiable:bool = True):
+    def draw_line(self, pt1:Tuple[float, float], pt2:Tuple[float, float], visible:bool = True):
         element = etree.fromstring(
             '<line id="{}" x1="{}" y1="{}" x2="{}" y2="{}"/>'.format(self.__create_ref('line'), *pt1, *pt2))
-        self.__append_element(element, visiable)
+        self.__append_element(element, visible)
         return SvgElement(element)
 
-    def draw_polygon(self, vertex:List[Tuple[float, float]], visiable:bool = True):
+    def draw_polygon(self, vertex:List[Tuple[float, float]], visible:bool = True):
         element = etree.fromstring(
             '<polygon id="{}" points="{}"/>'.format(self.__create_ref('polygon'), ' '.join(['{},{}'.format(*x) for x in vertex])))
-        self.__append_element(element, visiable)
+        self.__append_element(element, visible)
         return SvgElement(element)
 
-    def draw_polyline(self, points:List[Tuple[float, float]], visiable:bool = True):
+    def draw_polyline(self, points:List[Tuple[float, float]], visible:bool = True):
         element = etree.fromstring(
             '<polyline id="{}" points="{}"/>'.format(self.__create_ref('polyline'),
                                                     ' '.join(['{},{}'.format(*x) for x in points])))
-        self.__append_element(element, visiable)
+        self.__append_element(element, visible)
         return SvgElement(element)
 
     def __repr__(self):
-        svg_bytes = etree.tostring(self.context, pretty_print=True, encoding='utf-8') # type: bytes
+        svg_bytes = etree.tostring(self.__context, pretty_print=True, encoding='utf-8') # type: bytes
         return svg_bytes.decode('utf-8').replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
 
 if __name__ == '__main__':
