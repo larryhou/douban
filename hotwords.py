@@ -4,6 +4,13 @@ from typing import Tuple, List
 from functools import cmp_to_key
 excludes = tuple('。，；：…（）《》？！、“”—[]【】°的个')
 
+class TreeNode(object):
+    def __init__(self, data:str):
+        self.children = []   # type: List[TreeNode]
+        self.data = data     # type: str
+        self.position = None # type: List[float, float]
+        self.parent = None   # type: TreeNode
+
 class elapse_dubugger(object):
     def __init__(self):
         self.__time = time.clock()
@@ -114,6 +121,24 @@ def iterate_search(data_list:typing.List[str], hotword:str):
             continue
         hotword_list += iterate_search(data_list, hotword + char)
     return hotword_list
+
+def create_search_tree(data_list:typing.List[str], parent:TreeNode):
+    concat_map = {}
+    for r in range(len(data_list)):
+        scope = data_list[r]
+        if not scope:continue
+        char = scope[0]
+        if not char or ord(char) <= 0x7F or char in excludes:continue
+        if char not in concat_map: concat_map[char] = [0, []]
+        concat_map[char][0] += 1
+        concat_map[char][1].append(scope[1:])
+    for char in concat_map.keys():
+        num, data_list = concat_map.get(char)
+        node = TreeNode(char)
+        node.parent = parent
+        parent.children.append(node)
+        if num == 1: continue
+        create_search_tree(data_list, node)
 
 if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
