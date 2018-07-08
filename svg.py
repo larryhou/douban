@@ -242,7 +242,7 @@ class SvgGraphics(object):
         return element_ref
 
     def __append_element(self, element, visible:bool):
-        node = self.__group if self.__group else self.__context
+        node = self.__group if self.__group is not None else self.__context
         node.append(element) if visible else self.__defs.append(element)
 
     def create_linear_gradient(self, pt1:Tuple[float, float], pt2:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
@@ -346,4 +346,8 @@ if __name__ == '__main__':
         .fill('green')\
         .rotate(20)\
         .translate(100,100).skewX(10).skewY(10).matrix(1,2,3,4,5,6)
+    graphics.new_group()
+    graphics.draw_circle(100, (0,0))
+    graphics.new_group()
+    graphics.draw_ellipse((10,20), (40, 50))
     print(graphics.__repr__())
