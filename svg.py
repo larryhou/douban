@@ -238,7 +238,8 @@ class SvgGraphics(object):
         ''') # type: etree._Element
         self.__defs = self.__context.xpath('//defs')[0] # type: etree._Element
         self.__ref_counter = 1
-        self.__group = None
+        self.__group = None # type: etree._Element
+        self.__mask = None  # type: etree._Element
 
     def __create_ref(self, name:str):
         element_ref = '{}-{:03d}'.format(name, self.__ref_counter)
@@ -246,7 +247,11 @@ class SvgGraphics(object):
         return element_ref
 
     def __append_element(self, element, visible:bool):
-        node = self.__group if self.__group is not None else self.__context
+        node = self.__context
+        if self.__mask is not None:
+            node = self.__mask
+        elif self.__group is not None:
+            node = self.__group
         node.append(element) if visible else self.__defs.append(element)
 
     def create_linear_gradient(self, pt1:Tuple[float, float], pt2:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
@@ -273,6 +278,14 @@ class SvgGraphics(object):
 
     def end_group(self):
         self.__group = None
+
+    def new_clip_path(self):
+        if self.__mask is not None: return
+        self.__mask = etree.fromstring('<clipPath id="{}"/>') # type: etree._Element
+        self.__defs.append(self.__mask)
+
+    def end_clip_path(self):
+        self.__mask = None
 
     def draw_path(self, path:SvgPath, visible:bool = True)->SvgElement:
         element = etree.fromstring('<path id="{}" d="{}"/>'.format(self.__create_ref('path'), path))
