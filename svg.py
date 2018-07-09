@@ -168,6 +168,7 @@ class SvgElement(object):
         :param spacing: auto | exact
         :return:
         """
+        assert self.__element.tag == 'text'
         text = ''.join(self.__element.itertext())
         for item in self.__element.getchildren(): self.__element.remove(item)
         self.__element.text = None
