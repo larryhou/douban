@@ -160,6 +160,22 @@ class SvgElement(object):
         if rotate != 0: self.__element.set('rotate', repr(rotate))
         return self
 
+    def text_path(self, path_ref:str, offset:float = 0, method:str='align', spacing='auto'):
+        """
+        :param path_ref:
+        :param offset:
+        :param method: align | stretch
+        :param spacing: auto | exact
+        :return:
+        """
+        text = ''.join(self.__element.itertext())
+        self.__element.text = None
+        for item in self.__element.getchildren(): self.__element.remove(item)
+        xlink = self.__element.nsmap.get('xlink')
+        element = etree.fromstring('<textPath xmlns:xlink="{}" xlink:href="#{}" offset="{}" method="{}" spacing="{}">{}</textPath>'.format(xlink, path_ref, offset, method, spacing ,text))
+        self.__element.append(element)
+        return self
+
     def css(self, style:str):
         self.__element.set('style', style)
         return self
@@ -418,4 +434,5 @@ if __name__ == '__main__':
     graphics.draw_circle(100, (0,0))
     graphics.new_group()
     graphics.draw_ellipse((10,20), (40, 50))
+    graphics.draw_text('测试路径吸附').text_path('test').text_path('hello', 10)
     print(graphics.__repr__())
