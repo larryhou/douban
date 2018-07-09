@@ -172,7 +172,7 @@ class SvgElement(object):
         for item in self.__element.getchildren(): self.__element.remove(item)
         self.__element.text = None
         xlink = self.__element.nsmap.get('xlink')
-        text_path = etree.fromstring('<textPath xmlns:xlink="{}" xlink:href="#{}" offset="{}" method="{}" spacing="{}">{}</textPath>'.format(xlink, path_ref, offset, method, spacing ,text))
+        text_path = etree.fromstring('<textPath xmlns:xlink="{}" xlink:href="#{}" offset="{}" method="{}" spacing="{}">{}</textPath>'.format(xlink, path_ref, offset, method, spacing, text))
         self.__element.append(text_path)
         return self
 
