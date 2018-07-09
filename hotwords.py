@@ -6,7 +6,7 @@ import svg
 excludes = tuple('。，；：…（）《》？！、“”—[]【】°的个')
 
 class commands(object):
-    dump_hotwords = 'dump-hotwords'
+    dump_hotword = 'dump-hotword'
     dump_graph = 'dump-graph'
 
     @classmethod
@@ -25,7 +25,7 @@ class ArgumentOptions(object):
         self.depth = data.depth # type: int
         self.debug = data.debug # type: bool
         self.char = data.char # str
-        self.char = self.char[0]
+        if self.char: self.char = self.char[0]
         self.hide_text = data.hide_text # type:bool
         self.svg_name = data.svg_name # type:str
 
@@ -260,7 +260,7 @@ def create_search_tree(data_list:typing.List[str], parent:TreeNode):
 
 if __name__ == '__main__':
     arguments = argparse.ArgumentParser()
-    arguments.add_argument('--command', '-c', default=commands.dump_hotwords, choices=commands.option_choices())
+    arguments.add_argument('--command', '-c', default=commands.dump_hotword, choices=commands.option_choices())
     arguments.add_argument('--text-path', '-p', required=True)
     arguments.add_argument('--webpage', '-w', action='store_true')
     arguments.add_argument('--max-num', '-m', type=int, default=0)
@@ -306,5 +306,5 @@ if __name__ == '__main__':
     if options.command == commands.dump_graph:
         assert options.char
         create_hotword_network(buffer)
-    elif options.command == commands.dump_hotwords:
+    elif options.command == commands.dump_hotword:
         caculate_hotwords(buffer)
