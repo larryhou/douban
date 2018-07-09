@@ -169,11 +169,11 @@ class SvgElement(object):
         :return:
         """
         text = ''.join(self.__element.itertext())
-        self.__element.text = None
         for item in self.__element.getchildren(): self.__element.remove(item)
+        self.__element.text = None
         xlink = self.__element.nsmap.get('xlink')
-        element = etree.fromstring('<textPath xmlns:xlink="{}" xlink:href="#{}" offset="{}" method="{}" spacing="{}">{}</textPath>'.format(xlink, path_ref, offset, method, spacing ,text))
-        self.__element.append(element)
+        text_path = etree.fromstring('<textPath xmlns:xlink="{}" xlink:href="#{}" offset="{}" method="{}" spacing="{}">{}</textPath>'.format(xlink, path_ref, offset, method, spacing ,text))
+        self.__element.append(text_path)
         return self
 
     def css(self, style:str):
