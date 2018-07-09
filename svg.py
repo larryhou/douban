@@ -8,7 +8,7 @@ class SvgPath(object):
         self.__data = io.StringIO()
 
     def clear(self):
-        self.__data.truncate(0)
+        self.__data = io.StringIO()
 
     def move_to(self, x:float, y:float, absolute:bool = True):
         self.__data.write('{} {} {} '.format('M' if absolute else 'm', x, y))
@@ -62,8 +62,20 @@ class SvgPath(object):
     def close_path(self):
         self.__data.write('z')
 
+    def catmull_rom_segment(self, points:List[Tuple[float, float]], interpolate_density:int = 10):
+        points = points.copy()
+        if len(points) == 2: points.insert(0, points[0])
+        if len(points) <= 1: return
+        self.move_to(*points[-2])
+        points.append(points[-1])
+        control_points = points[-4:]
+        for i in range(interpolate_density + 1):
+            position = interpolate_with_catmull_rom(*control_points, t=i / interpolate_density)
+            self.line_to(*position)
+
     def catmull_rom(self, points:List[Tuple[float, float]], interpolate_density:int = 10):
         points = points.copy()
+        self.move_to(*points[0])
         points.insert(0, points[0])
         points.append(points[-1])
         for m in range(1, len(points) - 2):
@@ -123,8 +135,9 @@ class SvgElement(object):
         self.__element.set('stroke-width', repr(thickness))
         return self
 
-    def fill(self, color:str):
+    def fill(self, color:str, alpha:float = 1.0):
         self.__element.set('fill', color)
+        if alpha != 1: self.__element.set('opacity', repr(alpha))
         return self
 
     def fill_gradient(self, gradient_ref:str):
@@ -139,6 +152,12 @@ class SvgElement(object):
     def size(self, width:float, height:float):
         self.__element.set('width', repr(width))
         self.__element.set('height', repr(height))
+        return self
+
+    def font(self, font:str, size:float, rotate:float = 0):
+        if font: self.__element.set('font-family', font)
+        self.__element.set('font-size', repr(size))
+        if rotate != 0: self.__element.set('rotate', repr(rotate))
         return self
 
     def css(self, style:str):
@@ -263,6 +282,13 @@ class SvgGraphics(object):
             node = self.__groups[-1]
         node.append(element) if visible else self.__defs.append(element)
 
+    def set_view_box(self, x:float, y:float, width:float, height:float):
+        self.__context.set('viewBox', '{} {} {} {}'.format(x, y, width, height))
+
+    def set_size(self, width:float, height:float):
+        self.__context.set('width', repr(width))
+        self.__context.set('height', repr(height))
+
     def create_linear_gradient(self, pt1:Tuple[float, float], pt2:Tuple[float, float], stops:List[Tuple[float, str, float]], spread_method:str = spread_methods.repeat):
         style_ref = self.__create_ref('linear-gradient')
         gradient = etree.fromstring('<linearGradient id="{}" gradientUnits="userSpaceOnUse" x1="{}" y1="{}" x2="{}" y2="{}" spreadMethod="{}"/>'.format(style_ref, *pt1, *pt2, spread_method)) # type: etree._Element
@@ -286,6 +312,7 @@ class SvgGraphics(object):
             self.__groups[-1].append(group)
         else:
             self.__context.append(group)
+        self.__groups.append(group)
         return SvgElement(group)
 
     def end_group(self, exhaustive:bool = False):
@@ -315,7 +342,7 @@ class SvgGraphics(object):
 
     def draw_circle(self, radius:float, center:Tuple[float, float], visible:bool = True):
         element = etree.fromstring(
-            '<circle id="{}" radius="{}" cx="{}" cy="{}"/>'.format(self.__create_ref('circle'), radius, *center))
+            '<circle id="{}" r="{}" cx="{}" cy="{}"/>'.format(self.__create_ref('circle'), radius, *center))
         self.__append_element(element, visible)
         return SvgElement(element)
 
@@ -334,6 +361,14 @@ class SvgGraphics(object):
     def draw_polygon(self, vertex:List[Tuple[float, float]], visible:bool = True):
         element = etree.fromstring(
             '<polygon id="{}" points="{}"/>'.format(self.__create_ref('polygon'), ' '.join(['{},{}'.format(*x) for x in vertex])))
+        self.__append_element(element, visible)
+        return SvgElement(element)
+
+    def draw_text(self, text:str, offset:Tuple[float, float] = None, visible:bool = True):
+        if not offset:
+            element = etree.fromstring('<text id="{}">{}</text>'.format(self.__create_ref('text'), text))
+        else:
+            element = etree.fromstring('<text id="{}" dx="{}" dy="{}">{}</text>'.format(self.__create_ref('text'), *offset, text))
         self.__append_element(element, visible)
         return SvgElement(element)
 
