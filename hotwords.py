@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import argparse, sys, os, io, typing, time, pyquery, requests, math, random
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from functools import cmp_to_key
 import svg
-excludes = tuple('。，；：…（）《》？！、“”—[]【】°的个')
+exclude_signs = '。，；：…（）《》？！、“”—[]【】°'
+exclude_chars = '的了'
 
 class commands(object):
     dump_hotword = 'dump-hotword'
@@ -92,12 +93,21 @@ class elapse_dubugger(object):
         print('{:7.3f}ms {}'.format(1000*(time.clock() - self.__time), name))
         self.__time = time.clock()
 
+def char_scope_sort(a:str, b:str):
+    for n in range(len(a)):
+        if a[n] != b[n]: return 1 if a[n] > b[n] else -1
+    return 0
+
+def strip_char_map(char_map:Dict[str, List]):
+    for char in exclude_chars:
+        if char in char_map: del char_map[char]
+
 def create_hotword_network(buffer:io.StringIO):
     char_map = {}
     while True:
         char = buffer.read(1) # type:str
         if not char: break
-        if ord(char) <= 0x7F or char in excludes: continue
+        if ord(char) <= 0x7F or char in exclude_signs: continue
         if char not in char_map: char_map[char] = [0, []]
         position = buffer.tell()
         scope = buffer.read(HOTWORD_SEARCH_DEPTH)
@@ -105,7 +115,11 @@ def create_hotword_network(buffer:io.StringIO):
         item = char_map[char]
         item[1].append(scope)
         item[0] += 1
+    strip_char_map(char_map)
     root = TreeNode(options.char)
+    # data_list = char_map.get(root.data)[1]
+    # data_list.sort(key=cmp_to_key(char_scope_sort))
+    # print('\n'.join(data_list))
     create_search_tree(char_map.get(root.data)[1], root)
     # root.dump()
     root.walk_tree_graph(position=(0, 0), rotation=0)
@@ -144,7 +158,7 @@ def caculate_hotwords(buffer:io.StringIO):
     while True:
         char = buffer.read(1) # type:str
         if not char: break
-        if ord(char) <= 0x7F or char in excludes: continue
+        if ord(char) <= 0x7F or char in exclude_signs: continue
         if char not in char_map: char_map[char] = [0, []]
         position = buffer.tell()
         scope = buffer.read(HOTWORD_SEARCH_DEPTH)
@@ -152,6 +166,7 @@ def caculate_hotwords(buffer:io.StringIO):
         item = char_map[char]
         item[1].append(scope)
         item[0] += 1
+    strip_char_map(char_map)
     debug.log('char')
     char_list = list(char_map.keys())
     temp_list = []
@@ -226,7 +241,7 @@ def iterate_search(data_list:typing.List[str], hotword:str):
             if len(hotword) >= 2: hotword_list.append(hotword)
             continue
         char = scope[0]
-        if not char or ord(char) <= 0x7F or char in excludes:
+        if not char or ord(char) <= 0x7F or char in exclude_signs:
             if len(hotword) >= 2: hotword_list.append(hotword)
             continue
         if char not in concat_map: concat_map[char] = [0, []]
@@ -246,7 +261,7 @@ def create_search_tree(data_list:typing.List[str], parent:TreeNode):
         scope = data_list[r]
         if not scope:continue
         char = scope[0]
-        if not char or ord(char) <= 0x7F or char in excludes:continue
+        if not char or ord(char) <= 0x7F or char in exclude_signs:continue
         if char not in concat_map: concat_map[char] = [0, []]
         concat_map[char][0] += 1
         concat_map[char][1].append(scope[1:])
